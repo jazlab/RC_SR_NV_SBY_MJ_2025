@@ -1,18 +1,24 @@
-Instructions
+# Repository Overview
 
-The list of dependencies is included in paper.yml
-Additionally, R is required. Please make sure the environment variable is set to your installation location.
-To make plots, run make_plots.sh which will run python scripts that produce pdf files corresponding to panels in the paper indicated by its file name. The result is saved in data/plots_paper.
+This repository contains code to generate figures for the paper:
 
+**Evidence accumulation from experience and observation in the cingulate cortex**
 
-Code overview
+## Instructions
 
+- The list of dependencies is included in `paper.yml`.
+- **R** is required. Please ensure that the environment variable is set to your installation location.
+- To create the plots, run `make_plots.sh`. This script executes Python scripts that produce PDF files corresponding to the paper panels (as indicated by the file names). The generated plots are saved in `data/plots_paper`.
+
+## Code Overview
+
+```plaintext
 code
-|--behavior: analysis of behavior in the task, produces majority of behavior related plots
-|--eye: analysis of eye movement, produces eye gaze related plots
-|--msi_src: RNN instantiation of architectural hypotheses, produces RNN-related plots.
-|--pyTdr: a port of TDR (xx cite) from matlab to python, includes associated dimension analysis and produces related plots.
-|--single_unit: analysis of single unit activity, produces majority of single unit plots.
-|--spikes: code for making raster and histograms.
-|--utils: supporting code.
-|--paper.yml: dependencies
+|-- behavior      : Analysis of behavior in the task; produces the majority of behavior-related plots.
+|-- eye           : Analysis of eye movements; produces eye gaze-related plots.
+|-- msi_src       : RNN instantiation of architectural hypotheses; produces RNN-related plots.
+|-- pyTdr         : A port of TDR (xx cite) from MATLAB to Python; includes associated dimension analysis and produces related plots.
+|-- single_unit   : Analysis of single unit activity; produces the majority of single unit plots.
+|-- spikes        : Code for generating rasters and histograms.
+|-- utils         : Supporting code.
+|-- paper.yml     : Dependency list.
