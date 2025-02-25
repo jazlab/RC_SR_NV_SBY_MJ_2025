@@ -1,0 +1,38 @@
+{
+    "subject_name": "L",
+    "event": "fdbk",
+    "load_prev_history": false,
+    "time_window": [
+        -3,
+        3
+    ],
+    "max_units": 3000,
+    "minRate": 1,
+    "load_rew_switch": false,
+    "rejectConflict": false,
+    "rejectSwitch": false,
+    "load_3NR": false,
+    "desired_history": [
+        "1R",
+        "1NR",
+        "2NR"
+    ],
+    "trialcount_threshold": 10,
+    "gate_captures_lvl_list": [
+        1,
+        2,
+        3
+    ],
+    "gate_captures_list": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+    ]
+}
