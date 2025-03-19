@@ -26,6 +26,7 @@ export DYLD_LIBRARY_PATH="/Library/Frameworks/R.framework/Resources/lib:$DYLD_LI
 
 ## Instructions for use
 - To run analysis on your own data, replace files in data/ with your own.
+- To reproduce quantitative results in the manuscript, refer to the command line output when running the demo.
 
 ## Code Overview
 
