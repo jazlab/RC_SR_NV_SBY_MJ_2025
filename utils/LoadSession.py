@@ -12,7 +12,7 @@ import hashlib
 
 def findrootdir():
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    root_dir = root_dir.replace("code", "data") 
+    root_dir = os.path.join(root_dir, "data")
     if not os.path.exists(root_dir):
         ValueError("Root directory not found")
     return root_dir
