@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
+import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from utils.plots import beutify
 from behavior.trial_info_utils import calculate_regression_coefficients
@@ -27,7 +28,9 @@ def plot_slopes_by_session(root_dir, df, subject):
     slopes_observer_ngates = []
     slopes_actor_diffchoice = []
     slopes_condition = []
+    sessions = []
     for session in unique_sessions:
+        sessions.append(session)
         df_session = df[df["date"] == session]
         df_session.loc[:, "Early_or_late"] = 0
         df_session.loc[df_session["Pos_in_block"] > 5, "Early_or_late"] = 1
@@ -148,6 +151,24 @@ def plot_slopes_by_session(root_dir, df, subject):
     # make plot for individual animals only
     if subject == "Both":
         return
+
+    # save slopes and coefficients to a file
+    slopes_data = {
+        "session": sessions,
+        "slopes_actor": slopes_actor,
+        "slopes_observer": slopes_observer,
+        "slopes_actor_pos": slopes_actor_pos,
+        "slopes_observer_pos": slopes_observer_pos,
+        "slopes_actor_ngates": slopes_actor_ngates,
+        "slopes_observer_ngates": slopes_observer_ngates,
+        "slopes_actor_diffchoice": slopes_actor_diffchoice,
+        "slopes_condition": slopes_condition,
+    }
+    slopes_df = pd.DataFrame(slopes_data)
+    slopes_df.to_csv(
+        root_dir / "stats_paper" / f"slopes_{subject}.csv",
+        index=False,
+    )
 
     # Call the function for each factor
     plot_slopes(
