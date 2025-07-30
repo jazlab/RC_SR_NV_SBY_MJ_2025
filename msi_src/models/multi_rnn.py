@@ -142,7 +142,7 @@ class MultiRNN(abstract_model.AbstractModel):
         # Mask out loss for zero labels
         mask = torch.logical_not(torch.isnan(outputs["labels"])).bool()
         mse_loss = self._loss(outputs["outputs"][mask], outputs["labels"][mask])
-        loss_dict = {"loss": mse_loss}
+        loss_dict = {"mse_loss": mse_loss}
         # Theta regularization with inferred identity
         if self._constrain_theta and self._theta_reg_weight > 0:
             hiddens = outputs["hiddens"]
@@ -230,7 +230,9 @@ class MultiRNN(abstract_model.AbstractModel):
             if offset_losses:
                 theta_loss = torch.stack(offset_losses).mean()
                 loss_dict["theta_loss"] = theta_loss
-                loss_dict["loss"] += self._theta_reg_weight * theta_loss
+                loss_dict["loss"] = (
+                    self._theta_reg_weight * theta_loss + mse_loss
+                )
                 loss_dict["theta_cosine"] = last_valid_cos_sim
         return loss_dict
 
@@ -241,5 +243,5 @@ class MultiRNN(abstract_model.AbstractModel):
     def scalar_keys(self):
         keys = ("loss",)
         if self._constrain_theta:
-            keys += ("theta_loss", "theta_cosine")
+            keys += ("theta_loss", "theta_cosine", "mse_loss")
         return keys

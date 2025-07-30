@@ -37,6 +37,9 @@ def get_config():
                     "activity_decay": 0.2,
                     "require_input_grad": False,
                     "require_output_grad": False,
+                    "theta_reg_weight": 1,
+                    "theta_reg_timesteps": 5,  # Regularization for theta
+                    "theta_stimulus_mode": "ortho",  # p or o
                 },
             },
             "optim_config": {
