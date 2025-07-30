@@ -44,12 +44,10 @@ def extract_paths(path_dir, type="ortho", require_grad="False"):
     return paths_with_ids
 
 
-def load_neural_results(datadir):
+def load_neural_results(datadir, suffix=""):
     results_neural = {}
     for animal in ["O", "L"]:
-        file_name = (
-            f"{datadir}/stats_paper/{animal}_fdbk_act_obs_dimensions.json"
-        )
+        file_name = f"{datadir}/stats_paper/{animal}_fdbk_act_obs_dimensions{suffix}.json"
         if not os.path.exists(file_name):
             raise FileNotFoundError(f"File not found: {file_name}")
         with open(file_name, "r") as file:

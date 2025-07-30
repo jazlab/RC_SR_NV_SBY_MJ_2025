@@ -174,6 +174,7 @@ def select_congruent_trials(dataT):
                 unit["task_variable"][task_var] = unit["task_variable"][
                     task_var
                 ][idx_congruent]
+            unit["trial_ids"] = unit["trial_ids"][idx_congruent]
     else:
         idx_congruent = np.where(
             dataT["task_variable"]["choice_a0"]
@@ -214,6 +215,131 @@ def select_unequal_trials(task_variable, lvl=0):
         return []
 
 
+def remove_metadata_items(metadata, units_to_remove):
+    units_metadata = metadata["unit"]["unit_idx_master"]
+    idx_remove = np.isin(units_metadata, units_to_remove)
+    idx_keep = np.where(~idx_remove)[0]
+    for key in metadata["unit"].keys():
+        metadata["unit"][key] = [metadata["unit"][key][i] for i in idx_keep]
+    return metadata
+
+
+def equalize_actor_observer_unit_session(dataT_session, metadata_session):
+    # equalize number of self vs. other rew significant units for simultaneous
+    root_dir = findrootdir()
+    unit_idx_master = dataT_session["unit_idx_master"]
+    # equalize number of self vs. other rew significant units
+    df_sig_units_self = pd.read_csv(
+        f"{root_dir}/stats_paper/integration_sig_self_both.csv"
+    )
+    sig_units_self = df_sig_units_self["unit_index"].values
+    df_sig_units_other = pd.read_csv(
+        f"{root_dir}/stats_paper/integration_sig_other_both.csv"
+    )
+    sig_units_other = df_sig_units_other["unit_index"].values
+    # find the intersection of significant units between sig_units and sig_units_self
+    sig_units_self = np.intersect1d(unit_idx_master, sig_units_self)
+    sig_units_other = np.intersect1d(unit_idx_master, sig_units_other)
+    n_units_self = len(sig_units_self)
+    n_units_other = len(sig_units_other)
+    # make sure we can use fancy indexing
+    dataT_session["dimension"] = np.array(dataT_session["dimension"])
+    dataT_session["unit_idx_master"] = np.array(
+        dataT_session["unit_idx_master"]
+    )
+    # as a control equalize number of units from actor and observer selective units
+    if n_units_self > n_units_other:
+        n_units_diff = n_units_self - n_units_other
+        print(f"Removing {n_units_diff} units from Actor selective units")
+        # select n_units_diff from sig_units_self that are not in sig_units_other
+        sig_units_self_only = np.setdiff1d(sig_units_self, sig_units_other)
+        units_to_remove = np.random.choice(
+            sig_units_self_only, n_units_diff, replace=False
+        )
+        idx_keep = np.where(~np.isin(unit_idx_master, units_to_remove))[0]
+        # remove these from dataT['response'] matrix
+        dataT_session["response"] = dataT_session["response"][idx_keep, :, :]
+        dataT_session["dimension"] = dataT_session["dimension"][idx_keep]
+        dataT_session["unit_idx_master"] = dataT_session["unit_idx_master"][
+            idx_keep
+        ]
+    elif n_units_other > n_units_self:
+        n_units_diff = n_units_other - n_units_self
+        print(f"Removing {n_units_diff} units from Observer selective units")
+        # select n_units_diff from sig_units_other that are not in sig_units_self
+        sig_units_other_only = np.setdiff1d(sig_units_other, sig_units_self)
+        units_to_remove = np.random.choice(
+            sig_units_other_only, n_units_diff, replace=False
+        )
+        idx_keep = np.where(~np.isin(unit_idx_master, units_to_remove))[0]
+        # remove these from dataT['response'] matrix
+        dataT_session["response"] = dataT_session["response"][idx_keep, :, :]
+        dataT_session["dimension"] = dataT_session["dimension"][idx_keep]
+        dataT_session["unit_idx_master"] = dataT_session["unit_idx_master"][
+            idx_keep
+        ]
+    if metadata_session is not None:
+        return dataT_session, metadata_session
+    return dataT_session
+
+
+def equalize_actor_observer_unit(dataT, metadata=None):
+    root_dir = findrootdir()
+    unit_idx_master = [unit["unit_idx_master"] for unit in dataT["unit"]]
+    # equalize number of self vs. other rew significant units
+    df_sig_units_self = pd.read_csv(
+        f"{root_dir}/stats_paper/integration_sig_self_both.csv"
+    )
+    sig_units_self = df_sig_units_self["unit_index"].values
+    df_sig_units_other = pd.read_csv(
+        f"{root_dir}/stats_paper/integration_sig_other_both.csv"
+    )
+    sig_units_other = df_sig_units_other["unit_index"].values
+    # find the intersection of significant units between sig_units and sig_units_self
+    sig_units_self = np.intersect1d(unit_idx_master, sig_units_self)
+    sig_units_other = np.intersect1d(unit_idx_master, sig_units_other)
+    n_units_self = len(sig_units_self)
+    n_units_other = len(sig_units_other)
+    # as a control equalize number of units from actor and observer selective units
+    if n_units_self > n_units_other:
+        n_units_diff = n_units_self - n_units_other
+        print(f"Removing {n_units_diff} units from Actor selective units")
+        # select n_units_diff from sig_units_self that are not in sig_units_other
+        sig_units_self_only = np.setdiff1d(sig_units_self, sig_units_other)
+        units_to_remove = np.random.choice(
+            sig_units_self_only, n_units_diff, replace=False
+        )
+        # remove these from dataT
+        dataT["unit"] = [
+            unit
+            for unit in dataT["unit"]
+            if unit["unit_idx_master"] not in units_to_remove
+        ]
+        # remove from metadata if exists
+        if metadata is not None:
+            metadata = remove_metadata_items(metadata, units_to_remove)
+    elif n_units_other > n_units_self:
+        n_units_diff = n_units_other - n_units_self
+        print(f"Removing {n_units_diff} units from Observer selective units")
+        # select n_units_diff from sig_units_other that are not in sig_units_self
+        sig_units_other_only = np.setdiff1d(sig_units_other, sig_units_self)
+        units_to_remove = np.random.choice(
+            sig_units_other_only, n_units_diff, replace=False
+        )
+        # remove these from dataT
+        dataT["unit"] = [
+            unit
+            for unit in dataT["unit"]
+            if unit["unit_idx_master"] not in units_to_remove
+        ]
+        # remove from metadata if exists
+        if metadata is not None:
+            metadata = remove_metadata_items(metadata, units_to_remove)
+    if metadata is not None:
+        return dataT, metadata
+    return dataT
+
+
 def tdrEqualizeActorObserverSwitchTrials(dataT):
     # for each unit, equalize the number of trials where preswitch is -1, 0, 1
     # for actor and observer
@@ -239,6 +365,9 @@ def tdrEqualizeActorObserverSwitchTrials(dataT):
                     unit["task_variable"][key] = np.delete(
                         unit["task_variable"][key], idx_trials_to_delete, axis=0
                     )
+                unit["trial_ids"] = np.delete(
+                    unit["trial_ids"], idx_trials_to_delete, axis=0
+                )
     return dataT
 
 
@@ -517,7 +646,7 @@ def filter_simultaneous_units(dataT, metadata, date=None):
     # FIND LARGE SUBSET OF VALID UNIT TRIALS
     ind_units, trial_nums = find_subset_with_all_ones(unit_trials_valid)
     if ind_units is None:
-        return None
+        return None, None
     n_units_keep = len(ind_units)
     response_matrix = np.zeros(
         [n_units_keep, len(dataT["time"]), len(trial_nums)]
