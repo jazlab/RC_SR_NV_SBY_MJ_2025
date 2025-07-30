@@ -1,6 +1,6 @@
 """
 this script is used to plot the activation and angles of the neural network
-it loads snapshots of RNNs for each variant, and makes plots of the activations 
+it loads snapshots of RNNs for each variant, and makes plots of the activations
 and angles
 """
 
@@ -407,9 +407,11 @@ def process_and_plot_results(
     return results
 
 
-def main(model_type, require_grad, iti=5, n_units=200):
+def main(
+    model_type, require_grad, id="39553470", iti=5, n_units=200, suffix=""
+):
     root_dir = findrootdir()
-    checkpoint_path = f"{root_dir}/rnn_snapshots/39553470"
+    checkpoint_path = f"{root_dir}/rnn_snapshots/{id}"
     rcParams["pdf.fonttype"] = 42
     paths_with_ids = extract_paths(
         checkpoint_path,
@@ -423,7 +425,9 @@ def main(model_type, require_grad, iti=5, n_units=200):
     # Ensure fig_dir exists
     os.makedirs(fig_dir, exist_ok=True)
 
-    results_neural = load_neural_results(root_dir)
+    if suffix:
+        postfix += f"{suffix}"
+    results_neural = load_neural_results(root_dir, suffix=suffix)
     # Process results
     results = process_and_plot_results(
         paths_with_ids,
@@ -437,6 +441,7 @@ def main(model_type, require_grad, iti=5, n_units=200):
     fignames_history = {
         "paral_False": "Fig4G",
         "ortho_False": "Fig4K",
+        "paral_paral": "FigS13B",
     }
     if postfix in fignames_history:
         fig = plot_ev_history(results, model_type)
@@ -450,23 +455,28 @@ def main(model_type, require_grad, iti=5, n_units=200):
         "ortho_False": "Fig4S",
         "paral_True": "FigS10D",
         "ortho_True": "FigS10B",
+        "ortho_False_equalNSwitch_equalNNeurons": "FigS11D",
     }
-    fig = plot_thetas_for_model_type(results, results_neural, model_type)
-    save_and_close_fig(
-        fig,
-        f"{fig_dir}/{fignames_angle[postfix]}_angle_histogram_{postfix}.pdf",
-    )
+    if postfix in fignames_angle:
+        fig = plot_thetas_for_model_type(results, results_neural, model_type)
+        save_and_close_fig(
+            fig,
+            f"{fig_dir}/{fignames_angle[postfix]}_angle_histogram_{postfix}.pdf",
+        )
 
     fignames_angle = {
         "paral_False": "Fig4H",
         "ortho_False": "Fig4L",
         "paral_True": "FigS10D",
         "ortho_True": "FigS10B",
+        "ortho_False_NR": "FigS12F",
     }
-    fig = plot_polar_angles(results, results_neural, model_type)
-    save_and_close_fig(
-        fig, f"{fig_dir}/{fignames_angle[postfix]}_polar_angles_{postfix}.pdf"
-    )
+    if postfix in fignames_angle:
+        fig = plot_polar_angles(results, results_neural, model_type)
+        save_and_close_fig(
+            fig,
+            f"{fig_dir}/{fignames_angle[postfix]}_polar_angles_{postfix}.pdf",
+        )
 
     # Task and activation plots for latest checkpoint; only for fixed nets
     if require_grad == "True":
@@ -490,4 +500,10 @@ def main(model_type, require_grad, iti=5, n_units=200):
 if __name__ == "__main__":
     for model_type in ["ortho", "paral"]:
         for require_grad in ["True", "False"]:
-            main(model_type, require_grad)
+            for suffix in ["_NR", "_equalNSwitch_equalNNeurons", ""]:
+                print(
+                    f"Processing {model_type} with require_grad={require_grad}, suffix={suffix}"
+                )
+                main(model_type, require_grad, suffix=suffix)
+    # plot result from new control experiments
+    main("paral", "paral", id="41838359")
