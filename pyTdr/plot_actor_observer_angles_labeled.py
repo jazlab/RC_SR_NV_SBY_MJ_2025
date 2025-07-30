@@ -1,5 +1,5 @@
 """
-This script is used to make plot for the angle bwetween actor and observer 
+This script is used to make plot for the angle bwetween actor and observer
 outcome dimensions and the switch evidence direction.
 """
 
@@ -249,13 +249,11 @@ def make_polar_plot_with_magnitude(results, angle="self_other"):
 
 
 # make a polar plot of the angles between self and other directions
-def make_polar_plot(animal, event, angle="self_other"):
+def make_polar_plot(animal, event, angle="self_other", suffix=""):
     datadir = findrootdir()
     angle_directory = f"{datadir}/stats_paper"
     plot_directory = f"{datadir}/plots_paper"
-    file_name_b = (
-        f"{datadir}/stats_paper/{animal}_{event}_act_obs_dimensions.json"
-    )
+    file_name_b = f"{datadir}/stats_paper/{animal}_{event}_act_obs_dimensions{suffix}.json"
     # CHECK IF FILE EXISTS
     if not os.path.exists(file_name_b):
         print(f"File not found: {file_name_b}")
@@ -275,6 +273,7 @@ def make_polar_plot(animal, event, angle="self_other"):
         fig_name_polar = (
             f"{angle_directory}/{animal}_{event}_{angle}_polar_plot_sd.pdf"
         )
+    fig_name_polar = fig_name_polar.replace(".pdf", f"{suffix}.pdf")
     fig.savefig(fig_name_polar, dpi=300)
     plt.close()
 
@@ -288,14 +287,16 @@ def main():
 
     # return
     # load data
-    for event in ["fdbk", "prechoice"]:
-        make_combined_files(
-            event,
-            item="act_obs_dimensions",
-        )
-        for animal in ["O", "L", "both"]:
-            for angle in ["self_other", "self_switch", "switch_other"]:
-                make_polar_plot(animal, event, angle)
+    for suffix in ["", "_NR", "_equalNSwitch_equalNNeurons"]:
+        for event in ["fdbk", "prechoice"]:
+            file_name = f"act_obs_dimensions{suffix}"
+            make_combined_files(
+                event,
+                item=file_name,
+            )
+            for animal in ["O", "L", "both"]:
+                for angle in ["self_other", "self_switch", "switch_other"]:
+                    make_polar_plot(animal, event, angle, suffix=suffix)
 
 
 if __name__ == "__main__":

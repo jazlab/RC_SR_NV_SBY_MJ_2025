@@ -224,6 +224,7 @@ def plot_slopes_only(
     slopes_actor,
     slopes_observer,
     factor_name,
+    suffix="",
 ):
     ylims = {
         "EvDir_fdbk": [-0.5, 3],
@@ -320,7 +321,7 @@ def plot_slopes_only(
     plot_file_name = (
         root_dir
         / "plots_paper"
-        / f"{figname[subject]}_{subject}_slopes_{factor_name}.pdf"
+        / f"{figname[subject]}_{subject}_slopes_{factor_name}{suffix}.pdf"
     )
     fig.savefig(plot_file_name, bbox_inches="tight", dpi=300)
     plt.close()

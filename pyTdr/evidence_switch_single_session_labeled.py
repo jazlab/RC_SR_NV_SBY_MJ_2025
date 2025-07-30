@@ -25,6 +25,8 @@ from pyTdr.tdrUtils import (
     select_condition,
     filter_simultaneous_units,
     select_time,
+    tdrEqualizeActorObserverSwitchTrials,
+    equalize_actor_observer_unit_session,
     remove_rewarded_trials,
     remove_low_rate,
 )
@@ -281,13 +283,31 @@ def main(animal, event):
     if event == "prechoice":
         load_event = "choice"
     dataT, metadata = tdrLoadAccData(datadir, animal, load_event, time_window)
+    control_n_neurons = False
+    control_n_trials = False
+    if control_n_trials:
+        dataT = tdrEqualizeActorObserverSwitchTrials(dataT)
     print(f"loaded data for {animal} {event}")
     dates = np.unique(metadata["unit"]["date"])
     stat_sessions = {}
+
+    # --- Reporting variables initialization ---
+    included_sessions_count = 0
+    excluded_sessions_count = 0
+    neuron_counts_per_session = []
+    # ---
+
     for date in dates:
         dataT_session, metadata_session = filter_simultaneous_units(
             dataT, metadata, date
         )
+        if control_n_neurons:
+            dataT_session, metadata_session = (
+                equalize_actor_observer_unit_session(
+                    dataT_session, metadata_session
+                )
+            )
+            print(f"n of neurons: {len(dataT_session['dimension'])}")
         if event == "fdbk":
             tstart = 0.0
             tend = 0.6
@@ -303,7 +323,11 @@ def main(animal, event):
             event,
             date,
         )
+
+        # --- Reporting logic ---
         if stats_session is not None:
+            included_sessions_count += 1
+            neuron_counts_per_session.append(stats_session["n_units"])
             for key, value in stats_session.items():
                 if isinstance(value, np.ndarray):
                     stats_session[key] = value.tolist()
@@ -312,8 +336,61 @@ def main(animal, event):
             if formatted_window not in stat_sessions:
                 stat_sessions[formatted_window] = {}
             stat_sessions[formatted_window][date] = stats_session
+        else:
+            excluded_sessions_count += 1
+        # ---
+
+    print(f"Found {len(stat_sessions[formatted_window])} sessions")
+    # print average number of neurons per session:
+    avg_neurons = (
+        np.mean(
+            [
+                stats["n_units"]
+                for stats_list in stat_sessions.values()
+                for stats in stats_list.values()
+            ]
+        )
+        if stat_sessions
+        else 0
+    )
+    print(f"Average number of neurons per session: {avg_neurons}")
+
+    # --- Generate and save summary .txt file ---
+    summary_filename = f"{savedir}/{animal}_{event}_summary"
+    if control_n_trials:
+        summary_filename += "_equalNSwitch"
+    if control_n_neurons:
+        summary_filename += "_equalNNeurons"
+    summary_filename += ".txt"
+    with open(summary_filename, "w") as f:
+        f.write(f"Analysis Summary for Animal: {animal}, Event: {event}\n")
+        f.write("=" * 40 + "\n\n")
+        f.write("1. Number of Sessions\n")
+        f.write(f"  - Included in analysis: {included_sessions_count}\n")
+        f.write(f"  - Excluded from analysis: {excluded_sessions_count}\n\n")
+
+        if neuron_counts_per_session:
+            f.write("2. Neurons per Included Session\n")
+            f.write(
+                f"  - Range: {np.min(neuron_counts_per_session)} - {np.max(neuron_counts_per_session)}\n"
+            )
+            f.write(f"  - Mean: {np.mean(neuron_counts_per_session):.2f}\n")
+            f.write(
+                f"  - Standard Deviation: {np.std(neuron_counts_per_session):.2f}\n"
+            )
+        else:
+            f.write("2. Neurons per Included Session\n")
+            f.write("  - No sessions were included in the analysis.\n")
+    print(f"Saved summary to {summary_filename}")
+    # ---
+
     for window, stats in stat_sessions.items():
-        filename = f"{savedir}/{animal}_{event}_{window}_switch_dir_stats.json"
+        filename = f"{savedir}/{animal}_{event}_{window}_switch_dir_stats"
+        if control_n_trials:
+            filename += "_equalNSwitch"
+        if control_n_neurons:
+            filename += "_equalNNeurons"
+        filename += ".json"
         with open(filename, "w") as f:
             json.dump(stats, f)
         print(f"Saved {filename}")

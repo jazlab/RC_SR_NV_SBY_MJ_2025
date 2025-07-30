@@ -1,6 +1,6 @@
 """
 This script computes the projections of neural activity onto the switch evidence
-dimension for actor and observer trials. 
+dimension for actor and observer trials.
 
 """
 
@@ -29,6 +29,8 @@ from pyTdr.tdrUtils import (
     select_congruent_trials,
     remove_low_rate,
     prepare_test_data,
+    tdrEqualizeActorObserverSwitchTrials,
+    equalize_actor_observer_unit,
 )
 from utils.LoadSession import findrootdir
 from copy import deepcopy
@@ -244,6 +246,16 @@ def main(args):
     norm_params = {"ravg": meanT, "rstd": stdT}
     dataT_nrml = tdrNormalize(dataT, norm_params)
 
+    control_n_trials = True
+    # Optional control: equalize the number of Act/Obs switch trials
+    if control_n_trials:
+        dataT_nrml = select_congruent_trials(dataT_nrml)
+        dataT_nrml = tdrEqualizeActorObserverSwitchTrials(dataT_nrml)
+    # Optional control: equalize the number of Act/Obs selective neurons
+    control_n_neurons = True
+    if control_n_neurons:
+        dataT_nrml, _ = equalize_actor_observer_unit(dataT_nrml, metadata)
+
     n_shuffles = 100
     dataT_nrml["animal"] = subject
     dataT_nrml["event"] = event
@@ -254,8 +266,13 @@ def main(args):
         if isinstance(value, np.ndarray):
             results[key] = value.tolist()
     # save result to json file
+    result_name = f"{subject}_{event}_act_obs_projections"
+    if control_n_trials:
+        result_name += "_equalNSwitch"
+    if control_n_neurons:
+        result_name += "_equalNNeurons"
     with open(
-        f"{datadir}/stats_paper/{subject}_{event}_act_obs_projections.json",
+        f"{datadir}/stats_paper/{result_name}.json",
         "w",
     ) as f:
         json.dump(results, f)

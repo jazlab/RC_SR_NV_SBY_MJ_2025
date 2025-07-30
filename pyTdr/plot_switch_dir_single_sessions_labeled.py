@@ -139,7 +139,7 @@ def get_slope_and_beta(stat_sessions):
     return stat_sessions
 
 
-def plot_slope_and_coef(stat_sessions, subject, event):
+def plot_slope_and_coef(stat_sessions, subject, event, suffix=""):
     # use behavior.plot_slopes.py
     root_dir = Path(findrootdir())
     stat_sessions = get_slope_and_beta(stat_sessions)
@@ -152,13 +152,15 @@ def plot_slope_and_coef(stat_sessions, subject, event):
         slopes_actor,
         slopes_observer,
         factor_name,
+        suffix=suffix,
     )
 
 
 def main():
     # load data
     root_dir = findrootdir()
-    for event in ["fdbk"]:
+    event = "fdbk"
+    for suffix in ["", "_equalNSwitch_equalNNeurons"]:
         stat_sessions = {}
         # plot pswitch for each unit on a scatter plot
         if event == "fdbk":
@@ -170,31 +172,29 @@ def main():
         formatted_window = [round(tstart, 1), round(tend, 1)]
         formatted_window = str(formatted_window)
         for subject in ["O", "L"]:
-            file_name = f"{root_dir}/stats_paper/{subject}_{event}_{formatted_window}_switch_dir_stats.json"
+            file_name = f"{root_dir}/stats_paper/{subject}_{event}_{formatted_window}_switch_dir_stats{suffix}.json"
             stat_session = json.load(open(file_name, "r"))
             fig = plot_pswitch_by_sessions_leave_one_out(
                 stat_session, formatted_window
             )
-            fig_name_scatter = f"{root_dir}/plots_paper/FigS7CD_switch_by_sessions_{subject}.pdf"
+            fig_name_scatter = f"{root_dir}/plots_paper/FigS7CD_switch_by_sessions_{subject}{suffix}.pdf"
             fig.savefig(fig_name_scatter, dpi=300)
             plt.close()
             # calculate slope and beta for each session
             stat_session = get_slope_and_beta(stat_session)
-            plot_slope_and_coef(stat_session, subject, event)
+            plot_slope_and_coef(stat_session, subject, event, suffix=suffix)
             # append subject to each key of stat_session
             for key in list(stat_session.keys()):
                 stat_session[f"{subject}_{key}"] = stat_session.pop(key)
             # combine stat_sessions
             stat_sessions.update(stat_session)
         # combine stat_sessions
-        plot_slope_and_coef(stat_sessions, "both", event)
+        plot_slope_and_coef(stat_sessions, "both", event, suffix=suffix)
         # plot pswitch for each unit on a scatter plot
         fig = plot_pswitch_by_sessions_leave_one_out(
             stat_sessions, formatted_window
         )
-        fig_name_scatter = (
-            f"{root_dir}/plots_paper/Fig4C_switch_by_sessions_{event}.pdf"
-        )
+        fig_name_scatter = f"{root_dir}/plots_paper/Fig4C_switch_by_sessions_{event}{suffix}.pdf"
         fig.savefig(fig_name_scatter, dpi=300)
         plt.close()
 

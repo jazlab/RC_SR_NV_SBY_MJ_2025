@@ -93,7 +93,7 @@ def plot_projection_by_history(results):
         }
     )
     # Set up the figure
-    figsize = (4, 4)
+    figsize = (2, 2)
     fig = plt.figure(figsize=figsize, facecolor="white")
     data_actor = data[data["actor_observer"] == "Actor"]
     data_observer = data[data["actor_observer"] == "Observer"]
@@ -148,7 +148,7 @@ def plot_projection_by_history(results):
     return fig
 
 
-def make_plots_from_results(results, animal, event, angle_directory):
+def make_plots_from_results(results, animal, event, angle_directory, suffix=""):
     # plot pswitch for each unit on a scatter plot
     fig = plot_projection_by_history(results)
     fignames = {
@@ -156,16 +156,14 @@ def make_plots_from_results(results, animal, event, angle_directory):
         "O": "FigS7E",
         "L": "FigS7F",
     }
-    fig_name_scatter = f"{angle_directory}/{fignames[animal]}_{animal}_{event}_projection_by_history.pdf"
+    fig_name_scatter = f"{angle_directory}/{fignames[animal]}_{animal}_{event}_projection_by_history{suffix}.pdf"
     fig.savefig(fig_name_scatter, dpi=300)
     plt.close()
 
 
-def make_plots_per_animal(animal, event):
+def make_plots_per_animal(animal, event, suffix=""):
     datadir = findrootdir()
-    file_name = (
-        f"{datadir}/stats_paper/{animal}_{event}_act_obs_projections.json"
-    )
+    file_name = f"{datadir}/stats_paper/{animal}_{event}_act_obs_projections{suffix}.json"
     angle_directory = f"{datadir}/plots_paper"
     # CHECK IF FILE EXISTS
     if not os.path.exists(file_name):
@@ -173,7 +171,9 @@ def make_plots_per_animal(animal, event):
         return
     with open(file_name, "r") as file:
         results = json.load(file)
-    make_plots_from_results(results, animal, event, angle_directory)
+    make_plots_from_results(
+        results, animal, event, angle_directory, suffix=suffix
+    )
 
 
 def main():
@@ -181,12 +181,13 @@ def main():
     mpl.rcParams["font.family"] = "Arial"
     # load data
     for event in ["fdbk"]:
-        make_combined_files(
-            event,
-            item="act_obs_projections",
-        )
-        for animal in ["O", "L", "both"]:
-            make_plots_per_animal(animal, event)
+        for suffix in ["", "_equalNSwitch_equalNNeurons"]:
+            make_combined_files(
+                event,
+                item=f"act_obs_projections{suffix}",
+            )
+            for animal in ["O", "L", "both"]:
+                make_plots_per_animal(animal, event, suffix=suffix)
 
 
 if __name__ == "__main__":

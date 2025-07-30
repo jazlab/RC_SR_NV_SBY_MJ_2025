@@ -354,10 +354,17 @@ def plot_angles(ax, theta, magnitude, color, alpha):
 def extract_thetas_neural(results_neural):
     theta_self_other_neural_O = results_neural["O"]["theta_actor_observer"]
     theta_self_other_neural_L = results_neural["L"]["theta_actor_observer"]
-    theta_self_switch_O = results_neural["O"]["theta_switch_actor"]
-    theta_other_switch_O = results_neural["O"]["theta_switch_observer"]
-    theta_self_switch_L = results_neural["L"]["theta_switch_actor"]
-    theta_other_switch_L = results_neural["L"]["theta_switch_observer"]
+    if "theta_switch_actor" not in results_neural["O"]:
+        # if theta_switch_actor is not in results_neural, set to None
+        theta_self_switch_O = None
+        theta_other_switch_O = None
+        theta_self_switch_L = None
+        theta_other_switch_L = None
+    else:
+        theta_self_switch_O = results_neural["O"]["theta_switch_actor"]
+        theta_other_switch_O = results_neural["O"]["theta_switch_observer"]
+        theta_self_switch_L = results_neural["L"]["theta_switch_actor"]
+        theta_other_switch_L = results_neural["L"]["theta_switch_observer"]
     return (
         theta_self_other_neural_O,
         theta_self_other_neural_L,
@@ -698,6 +705,24 @@ def plot_thetas_for_model_type(results_network, results_neural, model_type):
         f"Self-out: {mean_self_out:.2f} ± {std_self_out:.2f}, "
         f"Other-out: {mean_other_out:.2f} ± {std_other_out:.2f}"
     )
+    # print stats of thetas for neural data
+    print(
+        f"Neural Self-other O: {np.mean(theta_self_other_neural_O):.2f} ± "
+        f"{np.std(theta_self_other_neural_O):.2f}, "
+        f"Neural Self-other L: {np.mean(theta_self_other_neural_L):.2f} ± "
+        f"{np.std(theta_self_other_neural_L):.2f}, "
+    )
+    if theta_self_switch_O is not None:
+        print(
+            f"Neural Self-switch O: {np.mean(theta_self_switch_O):.2f} ± "
+            f"{np.std(theta_self_switch_O):.2f}, "
+            f"Neural Other-switch O: {np.mean(theta_other_switch_O):.2f} ± "
+            f"{np.std(theta_other_switch_O):.2f}, "
+            f"Neural Self-switch L: {np.mean(theta_self_switch_L):.2f} ± "
+            f"{np.std(theta_self_switch_L):.2f}, "
+            f"Neural Other-switch L: {np.mean(theta_other_switch_L):.2f} ± "
+            f"{np.std(theta_other_switch_L):.2f}"
+        )
     nbins = 18
     fig, ax = plt.subplots(
         figsize=(4.7, 4.7), subplot_kw=dict(projection="polar")
@@ -721,10 +746,19 @@ def plot_thetas_for_model_type(results_network, results_neural, model_type):
     )
 
     # plot neural data
-    plot_error_bar_polar(ax, theta_self_switch_O, color_mean="b", color_sd="g")
-    plot_error_bar_polar(ax, theta_other_switch_O, color_mean="r", color_sd="g")
-    plot_error_bar_polar(ax, theta_self_switch_L, color_mean="b", color_sd="m")
-    plot_error_bar_polar(ax, theta_other_switch_L, color_mean="r", color_sd="m")
+    if theta_self_switch_O is not None:
+        plot_error_bar_polar(
+            ax, theta_self_switch_O, color_mean="b", color_sd="g"
+        )
+        plot_error_bar_polar(
+            ax, theta_other_switch_O, color_mean="r", color_sd="g"
+        )
+        plot_error_bar_polar(
+            ax, theta_self_switch_L, color_mean="b", color_sd="m"
+        )
+        plot_error_bar_polar(
+            ax, theta_other_switch_L, color_mean="r", color_sd="m"
+        )
     beutify_polar(ax)
 
     plt.tight_layout()

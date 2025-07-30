@@ -30,10 +30,12 @@ from pyTdr.tdrUtils import (
     select_significant_units,
     select_congruent_trials,
     tdrEqualizeActorObserverSwitchTrials,
+    equalize_actor_observer_unit,
     remove_low_rate,
 )
 from compute_angle import compute_angle
 from utils.LoadSession import findrootdir
+from utils.get_session_info import load_subject_names
 from pyTdr.tdrModifyTaskVar import use_prev_switch
 from copy import deepcopy
 import multiprocessing
@@ -90,6 +92,9 @@ def perform_shuffles_helper(args):
         random_seed=i_shuff,
     )
 
+    if not dataT_nrml_regr["unit"]:
+        return None
+
     conditions = {
         "reward": [1, 1, 2, 2],
         "actor": [1, 1, 1, 1],
@@ -124,6 +129,12 @@ def perform_shuffles_helper(args):
         dataC_act,
         dataC_obs,
     )
+
+    if len(dataT_nrml_regr["unit"]) < 2:
+        print(
+            f"Not enough units for regression in session {dataT_nrml_regr['unit'][0]['session_id']}"
+        )
+        return None
 
     # Perform linear regression on switch
     coef_switch = perform_regression(
@@ -237,6 +248,41 @@ def perform_shuffles_helper(args):
     }
 
 
+def tdrSelectByID(data, session_id):
+    print(f"Selecting data for session {session_id}")
+    data_session = {
+        "unit": [
+            unit for unit in data["unit"] if unit["session_id"] == session_id
+        ],
+        "time": data["time"],
+    }
+    print(
+        f"Number of units in session {session_id}: {len(data_session['unit'])}"
+    )
+
+    return data_session
+
+
+def tdrSelectByTrial(data, trial_id_start, trial_id_end):
+    print(f"Selecting data for trials {trial_id_start} to {trial_id_end}")
+    data_trial = deepcopy(data)
+    for unit in data_trial["unit"]:
+        idx_trials = np.array(
+            [
+                trial_id_start <= trial_id < trial_id_end
+                for trial_id in unit["task_variable"]["trial_num"]
+            ]
+        )
+        unit["response"] = unit["response"][idx_trials, :]
+        for task_var in unit["task_variable"]:
+            unit["task_variable"][task_var] = unit["task_variable"][task_var][
+                idx_trials
+            ]
+    print(f"Number of units in selected trials: {len(data_trial['unit'])}")
+
+    return data_trial
+
+
 def perform_shuffles(n_shuffles, dataT_nrml):
     def perform_shuffles_parallel(n_shuffles, dataT_nrml):
         # run one shuffle in seriel for debugging
@@ -258,7 +304,8 @@ def perform_shuffles(n_shuffles, dataT_nrml):
             for i in range(n_shuffles):
                 dataT_nrml_ = deepcopy(dataT_nrml)
                 result = perform_shuffles_helper((i, dataT_nrml_))
-                results.append(result)
+                if result:
+                    results.append(result)
         else:
             n_cores = min(multiprocessing.cpu_count(), 20)
             print(f"Using {n_cores} cores")
@@ -267,6 +314,8 @@ def perform_shuffles(n_shuffles, dataT_nrml):
                     perform_shuffles_helper,
                     [(i, dataT_nrml) for i in range(n_shuffles)],
                 )
+        if not results:
+            return None
         for i, result in enumerate(results):
             proj_act_shuff_actor[i, :, :] = result["proj_act_shuff_actor"]
             proj_act_shuff_observer[i, :, :] = result["proj_act_shuff_observer"]
@@ -374,11 +423,63 @@ def main(args):
     norm_params = {"ravg": meanT, "rstd": stdT}
     dataT_nrml = tdrNormalize(dataT, norm_params)
 
+    # NEW: perform analysis on each session separately
+    # get the list of sessions
+    subject_names = load_subject_names()
+    session_ids = np.unique([unit["session_id"] for unit in dataT_nrml["unit"]])
+    compute_per_session = False
+    if compute_per_session:
+        for session_id in session_ids:
+            # find the corresponding date based on session_id
+            date = subject_names.loc[
+                (
+                    (subject_names["subject1"] == subject)
+                    | (subject_names["subject2"] == subject)
+                )
+                & (subject_names["session #"] == session_id),
+                "date",
+            ].values[0]
+
+            # select data for this session
+            dataT_session = tdrSelectByID(dataT_nrml, session_id)
+
+            if len(dataT_session["unit"]) < 2:
+                print(
+                    f"Not enough units for session {session_id} in {subject} {event}"
+                )
+                continue
+
+            # perform shuffles for this session
+            n_shuffles = 100
+            dataT_session["animal"] = subject
+            dataT_session["event"] = event
+            results = perform_shuffles(n_shuffles, dataT_session)
+            if results is None:
+                print(
+                    f"No results for session {session_id} in {subject} {event}"
+                )
+                continue
+
+            for key, value in results.items():
+                if isinstance(value, np.ndarray):
+                    results[key] = value.tolist()
+            if not os.path.exists(f"{datadir}/stats_paper"):
+                os.makedirs(f"{datadir}/stats_paper")
+            # save result to json file
+            with open(
+                f"{datadir}/stats_paper/{subject}_{event}_act_obs_dimensions_{date}.json",
+                "w",
+            ) as f:
+                json.dump(results, f)
+    control_n_neurons = False
     control_n_trials = False
     # Optional control: equalize the number of Act/Obs switch trials
     if control_n_trials:
         dataT_nrml = select_congruent_trials(dataT_nrml)
         dataT_nrml = tdrEqualizeActorObserverSwitchTrials(dataT_nrml)
+    # Optional control: equalize the number of Act/Obs selective neurons
+    if control_n_neurons:
+        dataT_nrml = equalize_actor_observer_unit(dataT_nrml)
 
     n_shuffles = 100
     dataT_nrml["animal"] = subject
@@ -392,8 +493,13 @@ def main(args):
     if not os.path.exists(f"{datadir}/stats_paper"):
         os.makedirs(f"{datadir}/stats_paper")
     # save result to json file
+    result_name = f"{subject}_{event}_act_obs_dimensions"
+    if control_n_trials:
+        result_name += "_equalNSwitch"
+    if control_n_neurons:
+        result_name += "_equalNNeurons"
     with open(
-        f"{datadir}/stats_paper/{subject}_{event}_act_obs_dimensions.json",
+        f"{datadir}/stats_paper/{result_name}.json",
         "w",
     ) as f:
         json.dump(results, f)
