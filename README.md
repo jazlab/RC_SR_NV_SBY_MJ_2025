@@ -14,10 +14,15 @@ This repository contains code to generate figures for the paper:
 - Install conda or miniconda on your system
 - Run 'conda env create -f paper.yml' to set up a conda environment
 - Install R on your system
-- Set environment variable for R (replace path to R as needed): 
+- Set environment variable for R (replace path to R as needed):
+For Mac:
 export R_HOME="/Library/Frameworks/R.framework/Resources"
 export PATH="/Library/Frameworks/R.framework/Resources/bin:$PATH"
 export DYLD_LIBRARY_PATH="/Library/Frameworks/R.framework/Resources/lib:$DYLD_LIBRARY_PATH"
+For Windows:
+set R_HOME=C:\Program Files\R\R-4.4.0
+set PATH=C:\Program Files\R\R-4.4.0\bin;%PATH%
+set R_LIBS_USER=C:\Program Files\R\R-4.4.0\library
 - Typical install time: 20 minutes.
 
 ## Demo
