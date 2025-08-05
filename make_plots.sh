@@ -32,6 +32,7 @@ fi
 cd $CURRENT_DIR/single_unit
 python plot_roc_histograms_labeled.py
 python plot_roc_nback_both_labeled.py
+python distance_between_actor_observer.py
 
 # spike data is too large to fit in the repo
 if [ "$demo" = false ]; then
@@ -46,6 +47,10 @@ python plot_actor_observer_angles_labeled.py
 python plot_actor_observer_projection_labeled.py
 python plot_switch_dir_single_sessions_labeled.py
 python plot_train_test_labeled.py
+python plot_slope_theta.py
+python plot_angle_over_time.py
 
 cd $CURRENT_DIR/msi_src
 python plot_rnn_behavior_and_geometry.py
+python plot_weights_svd.py
+python plot_loss.py
